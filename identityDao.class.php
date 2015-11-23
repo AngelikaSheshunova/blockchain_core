@@ -75,7 +75,43 @@ class VChainIdentityDao
 		return $data;
 	}
 
-	public static function record(&$identity, $data, $source_id, $using_cause, $ip)
+	public static function recordCheck(&$identity, $data, $diff_fields, $source_id, $ip)
+	{
+		unset($data["id"]);
+		unset($data["_id"]);
+
+		$m = new MongoClient();
+
+		$db = $m->vchain;
+
+		$collection = $db->identities;
+
+		$current_time = time();
+
+		$new_history_element = array(
+			"time"   => $current_time,
+			"action" => "check",
+			"fields" => VChainIdentity::getInputFields($data),
+			"diff_fields" => $diff_fields,
+			"ip"     => $ip,
+			"source" => $source_id
+		);
+
+		$identity["history"][] = $new_history_element;
+
+		$collection->update(
+			array("_id" => new MongoId($identity["id"])),
+			array(
+				'$push' => array(
+					"history" => $new_history_element
+				)
+			)
+		);
+
+		return true;
+	}
+
+	public static function recordUsage(&$identity, $data, $source_id, $using_cause, $ip)
 	{
 		unset($data["id"]);
 		unset($data["_id"]);

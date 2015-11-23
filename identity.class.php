@@ -161,14 +161,20 @@ class VChainIdentity
 
 							if (sizeof($comparsion_result) > 0)
 							{
+								$diff_fields = self::getDiffFields($comparsion_result);
+
+								VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+
 								return array(
 									"status"            => "error",
 									"error_reason_code" => ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES,
-									"possible_mistakes" => self::getDiffFields($comparsion_result)
+									"possible_mistakes" => $diff_fields
 								);
 							}
 
 							$identity_founded = true;
+
+							VChainIdentityDao::recordCheck($identities[0], $input_fields, array(), $source_id, $ip);
 
 							return array(
 								"status"   => "success",
@@ -197,10 +203,14 @@ class VChainIdentity
 								// нашли identity, теперь проверим все поля запроса
 								$comparsion_result = self::diff($identities[0], $formatted_data);
 
+								$diff_fields = self::getDiffFields($comparsion_result);
+
+								VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+
 								return array(
 									"status"            => "error",
 									"error_reason_code" => ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES,
-									"possible_mistakes" => self::getDiffFields($comparsion_result)
+									"possible_mistakes" => $diff_fields
 								);
 							}
 
@@ -228,7 +238,7 @@ class VChainIdentity
 		);
 	}
 
-	public static function record($data, $key, $using_cause, $ip, $force_possible_matches = false)
+	public static function recordUsage($data, $key, $using_cause, $ip, $force_possible_matches = false)
 	{
 		unset($data["id"]);
 		unset($data["_id"]);
@@ -273,7 +283,7 @@ class VChainIdentity
 
 				$created_identity = VChainIdentityDao::create($formatted_data, $source_id, $ip);
 
-				VChainIdentityDao::record($created_identity, $formatted_data, $source_id, $using_cause, $ip);
+				VChainIdentityDao::recordUsage($created_identity, $formatted_data, $source_id, $using_cause, $ip);
 
 				return array(
 					"status"   => "success",
@@ -298,7 +308,7 @@ class VChainIdentity
 
 				$identity = $check_identity_result["identity"];
 
-				VChainIdentityDao::record($identity, $formatted_data, $source_id, $using_cause, $ip);
+				VChainIdentityDao::recordUsage($identity, $formatted_data, $source_id, $using_cause, $ip);
 
 				return array(
 					"status"   => "success",
