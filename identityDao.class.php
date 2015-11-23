@@ -26,6 +26,22 @@ class VChainIdentityDao
 		return $output;
 	}
 
+	public static function get($identity_id)
+	{
+		$m = new MongoClient();
+
+		$db = $m->vchain;
+
+		$collection = $db->identities;
+
+		$document = $collection->findOne(array('_id' => new MongoId($identity_id)));
+
+		$document["id"] = (string) $document["_id"];
+		unset($document["_id"]);
+
+		return $document;
+	}
+
 	public static function create($data, $source_id, $ip)
 	{
 		unset($data["id"]);
@@ -122,13 +138,13 @@ class VChainIdentityDao
 
 	public static function saveVerifications(&$identity, $verifications, $source_id, $ip)
 	{
+		$current_time = time();
+
 		$m = new MongoClient();
 
 		$db = $m->vchain;
 
 		$collection = $db->identities;
-
-		$current_time = time();
 
 		$new_history_element = array(
 			"time"   => $current_time,
@@ -150,6 +166,7 @@ class VChainIdentityDao
 		);
 
 		$verifications_update = self::formVerificationsUpdate($verifications);
+
 		foreach ($verifications_update as $key => $value)
 		{
 			$verifications_update[$key] = array(
@@ -159,12 +176,13 @@ class VChainIdentityDao
 			);
 		}
 
-		$collection->update(
-			array("_id" => new MongoId($identity["id"])),
-			array(
-				'$set' => $verifications_update
-			)
-		);
+		foreach ($verifications_update as $key => $value)
+		{
+			$collection->update(
+				array("_id" => new MongoId($identity["id"])),
+				array('$push' => array($key => $value))
+			);
+		}
 
 		return true;
 	}

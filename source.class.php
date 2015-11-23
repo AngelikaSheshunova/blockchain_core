@@ -24,6 +24,35 @@ class VChainSource
 		return ($finded_count == 1);
 	}
 
+	public static function getById($source_id)
+	{
+		$output = false;
+
+		$m = new MongoClient();
+
+		$db = $m->vchain;
+
+		$collection = $db->sources;
+
+ 		$cursor = $collection->find(array(
+			"_id" => new MongoId($source_id)
+		));
+
+ 		$finded_count = 0;
+ 		foreach ($cursor as $document)
+ 		{
+ 			$output = array(
+ 				"id"         => (string) $document["_id"],
+ 				"key"        => $document["key"],
+ 				"public_key" => $document["public_key"],
+ 				"name"       => $document["name"],
+ 				"level"      => $document["level"]
+ 			);
+ 		}
+
+		return $output;
+	}
+
 	public static function getByKey($key)
 	{
 		$output = false;
@@ -45,7 +74,8 @@ class VChainSource
  				"id"         => (string) $document["_id"],
  				"key"        => $document["key"],
  				"public_key" => $document["public_key"],
- 				"name"       => $document["name"]
+ 				"name"       => $document["name"],
+ 				"level"      => $document["level"]
  			);
  		}
 
