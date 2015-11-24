@@ -104,6 +104,18 @@ class VChainIdentity
 		unset($data["using_cause"]);
 		unset($data["ignore_possible_matches"]);
 
+		$data_email = null;
+		$data_phone = null;
+		if (isset($data["user_data"]) && is_array($data["user_data"]))
+		{
+			if (isset($data["user_data"]["email"]))
+				$data_email = $data["user_data"]["email"];
+
+			if (isset($data["user_data"]["phone"]))
+				$data_phone = $data["user_data"]["phone"];
+		}
+		unset($data["user_data"]);
+
 		$source = VChainSource::getByKey($key);
 		$source_id = false;
 
@@ -247,6 +259,18 @@ class VChainIdentity
 		unset($data["using_cause"]);
 		unset($data["ignore_possible_matches"]);
 
+		$data_email = null;
+		$data_phone = null;
+		if (isset($data["user_data"]) && is_array($data["user_data"]))
+		{
+			if (isset($data["user_data"]["email"]))
+				$data_email = $data["user_data"]["email"];
+
+			if (isset($data["user_data"]["phone"]))
+				$data_phone = $data["user_data"]["phone"];
+		}
+		unset($data["user_data"]);
+
 		$source = VChainSource::getByKey($key);
 		$source_id = false;
 
@@ -281,7 +305,7 @@ class VChainIdentity
 
 				$input_fields = self::getInputFields($formatted_data);
 
-				$created_identity = VChainIdentityDao::create($formatted_data, $source_id, $ip);
+				$created_identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
 
 				VChainIdentityDao::recordUsage($created_identity, $formatted_data, $source_id, $using_cause, $ip);
 

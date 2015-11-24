@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . "/config.loc.php";
+
 require_once __DIR__ . "/utils.php";
 require_once __DIR__ . "/credentials.class.php";
 require_once __DIR__ . "/source.class.php";
@@ -7,7 +9,7 @@ require_once __DIR__ . "/verification.class.php";
 require_once __DIR__ . "/identityDao.class.php";
 require_once __DIR__ . "/identity.class.php";
 
-require_once __DIR__ . "/config.loc.php";
+require_once __DIR__ . "/notifications/notifications.class.php";
 
 define("ERROR_CODE_NOT_ENOUGH_CREDENTIALS", "NOT_ENOUGH_CREDENTIALS");
 define("ERROR_CODE_NOT_AUTHORIZED", "NOT_AUTHORIZED_FOR_OPERATION");

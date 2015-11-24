@@ -12,6 +12,18 @@ class VChainVerification
 		unset($data["using_cause"]);
 		unset($data["ignore_possible_matches"]);
 
+		$data_email = null;
+		$data_phone = null;
+		if (isset($data["user_data"]) && is_array($data["user_data"]))
+		{
+			if (isset($data["user_data"]["email"]))
+				$data_email = $data["user_data"]["email"];
+
+			if (isset($data["user_data"]["phone"]))
+				$data_phone = $data["user_data"]["phone"];
+		}
+		unset($data["user_data"]);
+
 		ksort($data);
 
 		$source = VChainSource::getByKey($key);
@@ -57,6 +69,28 @@ class VChainVerification
 
 					VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
 
+					$is_first_verification = true;
+					if (isset($identity["history"]) && sizeof($identity["history"]) > 0)
+					{
+						foreach ($identity["history"] as $history_index => $history_record)
+						{
+							if (isset($history_record["action"]) && $history_record["action"] == "verification")
+							{
+								$is_first_verification = false;
+
+								// TODO проверить, что проверялись какие-то значимые credentials
+
+								break;
+							}
+						}
+					}
+
+					if ($is_first_verification)
+					{
+						// первая верификация - начинаем процедуру активации пользователя
+						;
+					}
+
 					return array(
 						"status"   => "success"
 					);
@@ -71,7 +105,7 @@ class VChainVerification
 
 						$verification_data = self::applyVerificationSignatureRecursive($verification_fields, $verifications_binary_signatures);
 
-						$identity = VChainIdentityDao::create($formatted_data, $source_id, $ip);
+						$identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
 
 						VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
 
@@ -120,7 +154,8 @@ class VChainVerification
 		{
 			if (   strcmp($key, "created") == 0
 				|| strcmp($key, "history") == 0
-				|| strcmp($key, "verifications") == 0)
+				|| strcmp($key, "verifications") == 0
+				|| strcmp($key, "user_data") == 0)
 			{
 				// skip
 
@@ -144,7 +179,8 @@ class VChainVerification
 		{
 			if (   strcmp($key, "created") == 0
 				|| strcmp($key, "history") == 0
-				|| strcmp($key, "verifications") == 0)
+				|| strcmp($key, "verifications") == 0
+				|| strcmp($key, "user_data") == 0)
 			{
 				// skip
 

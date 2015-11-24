@@ -42,7 +42,7 @@ class VChainIdentityDao
 		return $document;
 	}
 
-	public static function create($data, $source_id, $ip)
+	public static function create($data, $data_email, $data_phone, $source_id, $ip)
 	{
 		unset($data["id"]);
 		unset($data["_id"]);
@@ -66,6 +66,20 @@ class VChainIdentityDao
 		);
 
 		$data["verifications"] = VChainVerification::getDefaultVerificationsTemplate($data);
+
+		$user_data = array();
+		if ($data_email != null && !empty($data_email))
+		{
+			$user_data["email"] = $data_email;
+		}
+		if ($data_phone != null && !empty($data_phone))
+		{
+			$user_data["phone"] = $data_phone;
+		}
+		if (sizeof($user_data) > 0)
+		{
+			$data["user_data"] = $user_data;
+		}
 
 		$collection->insert($data);
 
