@@ -42,7 +42,7 @@ class VChainIdentityDao
 		return $document;
 	}
 
-	public static function create($data, $data_email, $data_phone, $source_id, $ip)
+	public static function create($data, $data_email, $data_phone, $source_id, $ip, $emulation = false)
 	{
 		unset($data["id"]);
 		unset($data["_id"]);
@@ -85,6 +85,11 @@ class VChainIdentityDao
 
 		$data["id"] = (string) $data["_id"];
 		unset($data["_id"]);
+
+		if ($emulation)
+		{
+			$collection->remove(array("_id" => new MongoId($data["id"])));
+		}
 
 		return $data;
 	}

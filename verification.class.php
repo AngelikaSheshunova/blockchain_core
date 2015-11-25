@@ -69,28 +69,6 @@ class VChainVerification
 
 					VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
 
-					$is_first_verification = true;
-					if (isset($identity["history"]) && sizeof($identity["history"]) > 0)
-					{
-						foreach ($identity["history"] as $history_index => $history_record)
-						{
-							if (isset($history_record["action"]) && $history_record["action"] == "verification")
-							{
-								$is_first_verification = false;
-
-								// TODO проверить, что проверялись какие-то значимые credentials
-
-								break;
-							}
-						}
-					}
-
-					if ($is_first_verification)
-					{
-						// первая верификация - начинаем процедуру активации пользователя
-						;
-					}
-
 					return array(
 						"status"   => "success"
 					);
@@ -227,13 +205,35 @@ class VChainVerification
 		return $output;
 	}
 
-	public static function validateAndExportVerifications($formatted_data, $export_verifications)
+	public static function validateAndExportVerifications($formatted_data, $export_verifications, $claimed_fields = array())
 	{
 		$output = array();
 
 		foreach ($export_verifications as $key => $validations)
 		{
-			if (is_array($validations) && sizeof($validations) > 0)
+			$claimed_field = false;
+			if (is_array($claimed_fields))
+			{
+				foreach ($claimed_fields as $claim_key => $claim_value)
+				{
+					if (   !is_array($claim_value)
+						&& $claim_key == $key
+						&& $claim_value == 1)
+					{
+						$claimed_field = true;
+						break;
+					}
+				}
+			}
+
+			if ($claimed_field)
+			{
+				$output[$key] = array(
+					"verified" => false,
+					"claimed"  => true
+				);
+
+			} else if (is_array($validations) && sizeof($validations) > 0)
 			{
 				// сначала проверим, это вообще валидация, или просто массив?
 				$is_validation_arr = false;
@@ -305,12 +305,18 @@ class VChainVerification
 				} else {
 					foreach ($validations as $v_key => $values)
 					{
-						$output[$key] = self::validateAndExportVerifications($formatted_data[$key], $validations);
+						$claimed_sub_fields = array();
+						if (isset($claimed_fields[$key]) && is_array($claimed_fields[$key]))
+							$claimed_sub_fields = $claimed_fields[$key];
+
+						$output[$key] = self::validateAndExportVerifications($formatted_data[$key], $validations, $claimed_sub_fields);
 					}
 				}
 
 			} else {
-				$output[$key] = null;
+				$output[$key] = array(
+					"verified" => false
+				);
 			}
 		}
 

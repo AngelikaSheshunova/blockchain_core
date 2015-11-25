@@ -37,7 +37,7 @@ class VChainIdentity
 		return $output;
 	}
 
-	private static function export($identity, $input_fields, $key)
+	private static function export($identity, $input_fields, $key, $claimed_fields = array())
 	{
 		$output = array();
 
@@ -45,7 +45,7 @@ class VChainIdentity
 
 		$export_verifications = VChainVerification::getOnlyRequestedVerification($identity["verifications"], $input_fields);
 
-		$output["verifications"] = VChainVerification::validateAndExportVerifications($identity, $export_verifications);
+		$output["verifications"] = VChainVerification::validateAndExportVerifications($identity, $export_verifications, $claimed_fields);
 
 		return $output;
 	}
@@ -68,8 +68,7 @@ class VChainIdentity
 				if (   isset($identity[$key])
 					&& $identity[$key] !== $value)
 				{
-					$output[$key] = $identity[$key];
-
+					$output[$key] = $formatted_data[$key];
 				}
 			}
 		}
@@ -89,6 +88,41 @@ class VChainIdentity
 
 			} else {
 				$output[$key] = 1;
+			}
+		}
+
+		return $output;
+	}
+
+	public static function getOnlyRequestedFields($fields, $identity)
+	{
+		$output = array();
+
+		foreach ($identity as $key => $input_field_value)
+		{
+			if (   strcmp($key, "created") == 0
+				|| strcmp($key, "history") == 0
+				|| strcmp($key, "verifications") == 0
+				|| strcmp($key, "user_data") == 0)
+			{
+				// skip
+
+			} else if (is_array($input_field_value))
+			{
+				if (isset($fields[$key]))
+				{
+					$t = self::getOnlyRequestedFields($fields[$key], $input_field_value);
+					if (is_array($t) && sizeof($t) > 0)
+					{
+						$output[$key] = $t;
+					}
+				}
+
+			} else {
+				if (isset($fields[$key]))
+				{
+					$output[$key] = $identity[$key];
+				}
 			}
 		}
 
@@ -170,28 +204,76 @@ class VChainIdentity
 
 							// нашли identity, теперь проверим все поля запроса
 							$comparsion_result = self::diff($identities[0], $formatted_data);
+							$diff_fields = self::getDiffFields($comparsion_result);
 
 							if (sizeof($comparsion_result) > 0)
 							{
-								$diff_fields = self::getDiffFields($comparsion_result);
+								// есть отличия в сохраненном ранее документе и переданной
+								// информации
+								// проверим, нет ли уже claims на эти поля с такой инфой?
 
-								VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+								$claims = VChainClaimDao::getByIdentityId($identities[0]["id"]);
+
+								$claimed_fields = array();
+								foreach ($claims as $claim)
+								{
+									if (isset($claim["affected_identities"]) && is_array($claim["affected_identities"]))
+									{
+										foreach ($claim["affected_identities"] as $affected_identity)
+										{
+											if (is_array($affected_identity) && isset($affected_identity["identity_id"]))
+											{
+												if (   $affected_identity["identity_id"] == $identities[0]["id"]
+													&& $affected_identity["type"] == CLAIM_TYPE_POSSIBLE_CHANGES)
+												{
+													$removed_fields = removeMatches($comparsion_result, $affected_identity["diff"]);
+													if (sizeof($removed_fields) > 0)
+														$claimed_fields = array_merge($claimed_fields, $removed_fields);
+												}
+											}
+										}
+									}
+								}
+
+								if (sizeof($comparsion_result) == 0)
+								{
+									// все разночтения уже находятся в claim
+
+									$identity_founded = true;
+
+									VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+
+									return array(
+										"status"   => "success",
+										"identity" => self::export($identities[0], $input_fields, $key, $claimed_fields)
+									);
+
+								} else {
+
+									VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+
+									return array(
+										"status"            => "error",
+										"error_reason_code" => ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES,
+										"possible_mistakes" => $diff_fields,
+										"identities"        => array($identities[0]),
+										"restrictions"      => array(
+											IDENTITY_RESTRICTION_CREATION_PROHIBITED
+										)
+									);
+								}
+
+							} else {
+
+								$identity_founded = true;
+
+								VChainIdentityDao::recordCheck($identities[0], $input_fields, array(), $source_id, $ip);
 
 								return array(
-									"status"            => "error",
-									"error_reason_code" => ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES,
-									"possible_mistakes" => $diff_fields
+									"status"   => "success",
+									"identity" => self::export($identities[0], $input_fields, $key)
 								);
 							}
-
-							$identity_founded = true;
-
-							VChainIdentityDao::recordCheck($identities[0], $input_fields, array(), $source_id, $ip);
-
-							return array(
-								"status"   => "success",
-								"identity" => self::export($identities[0], $input_fields, $key)
-							);
 						}
 
 					} else {
@@ -205,6 +287,7 @@ class VChainIdentity
 						{
 							$mistake_lookup_fields = $arr["lookup"];
 							$possible_mistake_fields = $arr["possible_mistake"];
+							$restrictions = $arr["restrictions"];
 
 							$mistake_lookup = self::formLookup($mistake_lookup_fields, $formatted_data);
 
@@ -214,16 +297,61 @@ class VChainIdentity
 							{
 								// нашли identity, теперь проверим все поля запроса
 								$comparsion_result = self::diff($identities[0], $formatted_data);
-
 								$diff_fields = self::getDiffFields($comparsion_result);
 
-								VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+								// есть отличия в сохраненном ранее документе и переданной
+								// информации
+								// проверим, нет ли уже claims на эти поля с такой инфой?
 
-								return array(
-									"status"            => "error",
-									"error_reason_code" => ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES,
-									"possible_mistakes" => $diff_fields
-								);
+								$claims = VChainClaimDao::getByIdentityId($identities[0]["id"]);
+
+								$claimed_fields = array();
+								foreach ($claims as $claim)
+								{
+									if (isset($claim["affected_identities"]) && is_array($claim["affected_identities"]))
+									{
+										foreach ($claim["affected_identities"] as $affected_identity)
+										{
+											if (is_array($affected_identity) && isset($affected_identity["identity_id"]))
+											{
+												if (   $affected_identity["identity_id"] == $identities[0]["id"]
+													&& $affected_identity["type"] == CLAIM_TYPE_POSSIBLE_CHANGES)
+												{
+													$removed_fields = removeMatches($comparsion_result, $affected_identity["diff"]);
+													if (sizeof($removed_fields) > 0)
+														$claimed_fields = array_merge($claimed_fields, $removed_fields);
+												}
+											}
+										}
+									}
+								}
+
+								if (sizeof($comparsion_result) == 0)
+								{
+									// все разночтения уже находятся в claim
+
+									$identity_founded = true;
+
+									VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+
+									return array(
+										"status"   => "success",
+										"identity" => self::export($identities[0], $input_fields, $key, $claimed_fields)
+									);
+
+								} else {
+
+									VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
+
+									return array(
+										"status"            => "error",
+										"error_reason_code" => ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES,
+										"possible_mistakes" => $diff_fields,
+										"restrictions"      => $restrictions,
+										"mistake_level"     => $mistake_level,
+										"identities"        => $identities
+									);
+								}
 							}
 
 							$mistake_level++;
@@ -292,14 +420,10 @@ class VChainIdentity
 			&& isset($check_identity_result["status"]))
 		{
 			if (   $check_identity_result["status"] == "error"
-				&& (   $check_identity_result["error_reason_code"] == ERROR_CODE_IDENTITY_NOT_FOUND
-					|| (   $check_identity_result["error_reason_code"] == ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES
-						&& $force_possible_matches))
-			   )
+				&& $check_identity_result["error_reason_code"] == ERROR_CODE_IDENTITY_NOT_FOUND)
 			{
-				// такой identity нет, надо создать новую
-				// или было подозрение на совпадения, но оно форсируется
-				// ($force_possible_matches == true)
+				// такой identity нет, потенциальных ошибок не нашли,
+				// создаем новую identity
 
 				$formatted_data = $data;
 
@@ -315,14 +439,73 @@ class VChainIdentity
 				);
 
 			} else if (   $check_identity_result["status"] == "error"
-				       && $check_identity_result["error_reason_code"] == ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES
-				       && !$force_possible_matches)
+				       && $check_identity_result["error_reason_code"] == ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES)
 			{
-				// TODO что делать, если на use пришли данные с возможной ошибкой,
-				// но флаг игнорирования этого не выставлен?
-				error_log("INTERRUPT!");
-				error_log("POSSIBLE MISTAKES ON USE WITHOUT FORCE FLAG");
-				exit;
+				if (!$force_possible_matches)
+				{
+					// ест потенциальные ошибки,
+					// флага форсированного создания передано не было
+					return $check_identity_result;
+				}
+
+				$restrictions          = $check_identity_result["restrictions"];
+				$possible_mistakes     = $check_identity_result["possible_mistakes"];
+				$comparsion_identities = $check_identity_result["identities"];
+
+				$can_create_another_identity = true;
+				if (is_array($restrictions))
+				{
+					foreach ($restrictions as $key => $value)
+					{
+						if ($value == IDENTITY_RESTRICTION_CREATION_PROHIBITED)
+						{
+							$can_create_another_identity = false;
+						}
+					}
+				}
+
+				if ($can_create_another_identity)
+				{
+					// несмотря на возможные ошибки, создать новую identity можно
+					// но с обязательным проставлением claim на все возможные дубликаты полей
+
+					// создадим новую identity по переданным данным
+					$formatted_data = $data;
+
+					$input_fields = self::getInputFields($formatted_data);
+
+					$created_identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
+
+					VChainIdentityDao::recordUsage($created_identity, $formatted_data, $source_id, $using_cause, $ip);
+
+					// повесим claim на нее и на уже существуюшие
+					$claim = VChainClaim::generateForNewIdentity($created_identity, $comparsion_identities, $possible_mistakes);
+					$claim = VChainClaimDao::create($claim, $source_id, $ip);
+
+					return array(
+						"status"   => "success",
+						"identity" => self::export($created_identity, $input_fields, $key)
+					);
+
+				} else {
+					// создавать новую identity запрещено,
+					// необходимо повесить claim на текущую
+					$formatted_data = $data;
+
+					$input_fields = self::getInputFields($formatted_data);
+
+					$identity = $comparsion_identities[0];
+
+					VChainIdentityDao::recordUsage($identity, $formatted_data, $source_id, $using_cause, $ip);
+
+					$claim = VChainClaim::generate($identity["id"], $formatted_data, $possible_mistakes);
+					$claim = VChainClaimDao::create($claim, $source_id, $ip);
+
+					return array(
+						"status"   => "success",
+						"identity" => self::export($identity, $input_fields, $key)
+					);
+				}
 
 			} else if ($check_identity_result["status"] == "success")
 			{

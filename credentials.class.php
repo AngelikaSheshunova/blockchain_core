@@ -26,6 +26,9 @@ class VChainCredentials
 						),
 						"possible_mistake" => array(
 							CREDENTIAL_FIRST_NAME_FIELD
+						),
+						"restrictions" => array(
+							IDENTITY_RESTRICTION_CREATION_PROHIBITED
 						)
 					),
 					// имя+дата рождения+номер пасспорта+гражданство => фамилия
@@ -40,6 +43,9 @@ class VChainCredentials
 						),
 						"possible_mistake" => array(
 							CREDENTIAL_LAST_NAME_FIELD
+						),
+						"restrictions" => array(
+							IDENTITY_RESTRICTION_CREATION_PROHIBITED
 						)
 					),
 					// имя+фамилия+дата рождения+номер пасспорта => гражданство
@@ -56,6 +62,8 @@ class VChainCredentials
 							CREDENTIAL_PASSPORTS_FIELD => array(
 								CREDENTIAL_PASSPORT_NATIONALITY_FIELD
 							)
+						),
+						"restrictions" => array(
 						)
 					),
 					// имя+фамилия+дата рождения+гражданство => номер пасспорта
@@ -72,6 +80,8 @@ class VChainCredentials
 							CREDENTIAL_PASSPORTS_FIELD => array(
 								CREDENTIAL_PASSPORT_NUMBER_FIELD
 							)
+						),
+						"restrictions" => array(
 						)
 					),
 					// имя+фамилия+номер пасспорта+гражданство => дата рождения
@@ -86,6 +96,9 @@ class VChainCredentials
 						),
 						"possible_mistake" => array(
 							CREDENTIAL_BIRTHDATE_FIELD
+						),
+						"restrictions" => array(
+							IDENTITY_RESTRICTION_CREATION_PROHIBITED
 						)
 					),
 					// гражданство+фамилия+номер пасспорта => имя+дата рождения
@@ -100,6 +113,9 @@ class VChainCredentials
 						"possible_mistake" => array(
 							CREDENTIAL_FIRST_NAME_FIELD,
 							CREDENTIAL_BIRTHDATE_FIELD
+						),
+						"restrictions" => array(
+							IDENTITY_RESTRICTION_CREATION_PROHIBITED
 						)
 					),
 					// гражданство+имя+номер пасспорта => фамилия+дата рождения
@@ -114,6 +130,9 @@ class VChainCredentials
 						"possible_mistake" => array(
 							CREDENTIAL_LAST_NAME_FIELD,
 							CREDENTIAL_BIRTHDATE_FIELD
+						),
+						"restrictions" => array(
+							IDENTITY_RESTRICTION_CREATION_PROHIBITED
 						)
 					),
 					// гражданство+дата рождения+номер пасспорта => имя+фамилия
@@ -128,6 +147,9 @@ class VChainCredentials
 						"possible_mistake" => array(
 							CREDENTIAL_FIRST_NAME_FIELD,
 							CREDENTIAL_LAST_NAME_FIELD
+						),
+						"restrictions" => array(
+							IDENTITY_RESTRICTION_CREATION_PROHIBITED
 						)
 					),
 					// имя+фамилия+дата рождения => гражданство+номер пасспорта
@@ -142,6 +164,25 @@ class VChainCredentials
 								CREDENTIAL_PASSPORT_NUMBER_FIELD,
 								CREDENTIAL_PASSPORT_NATIONALITY_FIELD
 							)
+						),
+						"restrictions" => array(
+						)
+					),
+					// гражданство+номер пасспорта => имя+фамилия+дата рождения
+					array(
+						"lookup" => array(
+							CREDENTIAL_PASSPORTS_FIELD => array(
+								CREDENTIAL_PASSPORT_NUMBER_FIELD,
+								CREDENTIAL_PASSPORT_NATIONALITY_FIELD
+							)
+						),
+						"possible_mistake" => array(
+							CREDENTIAL_FIRST_NAME_FIELD,
+							CREDENTIAL_LAST_NAME_FIELD,
+							CREDENTIAL_BIRTHDATE_FIELD
+						),
+						"restrictions" => array(
+							IDENTITY_RESTRICTION_CREATION_PROHIBITED
 						)
 					)
 				);

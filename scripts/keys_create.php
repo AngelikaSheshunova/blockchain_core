@@ -14,8 +14,8 @@ $pubKey = openssl_pkey_get_details($res);
 $pubKey = $pubKey["key"];
 
 
-file_put_contents("../../www/demo-verifier.vchain/vchain-public.key", $pubKey);
+file_put_contents("../../www.vchain/vchain-public.key", $pubKey);
 
-file_put_contents("../../www/demo-verifier.vchain/vchain-private.key", $privKey);
+file_put_contents("../../www.vchain/vchain-private.key", $privKey);
 
 ?>
