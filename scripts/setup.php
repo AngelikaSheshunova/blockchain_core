@@ -28,6 +28,14 @@ $collection->insert(array(
 	"name"       => "vchain"
 ));
 
+$collection->insert(array(
+	"key"        => VCHAIN_SOURCE_KEY_DEMO_ADMIN,
+	"ips"        => array("127.0.0.1", "146.185.180.65"),
+	"public_key" => VCHAIN_URL_DEMO_ADMIN."vchain-public.key",
+	"level"      => 0,
+	"name"       => "vchain demo admin"
+));
+
 
 
 
