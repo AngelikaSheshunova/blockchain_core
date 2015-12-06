@@ -67,11 +67,69 @@ class VChainVerification
 
 					$identity = VChainIdentityDao::get($check_identity_result["identity"]["id"]);
 
-					VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
+					$diff = VChainIdentity::diff($identity, $formatted_data);
+					if (is_array($diff) && sizeof($diff) > 0)
+					{
+						// есть изменения в некоторых полях
 
-					return array(
-						"status"   => "success"
-					);
+						// обновляем содержимое самих полей
+						VChainIdentityDao::update($identity["id"], $diff, $source_id, $ip);
+
+						// сбрасываем верификации по обновленным полям
+						VChainIdentityDao::clearVerifications($identity["id"], $diff);
+
+						// необходимо проверить claims и разрешить их, если возможно
+						$claims = VChainClaimDao::getByIdentityId($identity["id"]);
+
+						foreach ($claims as $claim)
+						{
+							if (isset($claim["affected_identities"]) && is_array($claim["affected_identities"]))
+							{
+								foreach ($claim["affected_identities"] as $affected_identity)
+								{
+									if (is_array($affected_identity) && isset($affected_identity["identity_id"]))
+									{
+										if (   $affected_identity["identity_id"] == $identity["id"]
+											&& $affected_identity["type"] == CLAIM_TYPE_POSSIBLE_CHANGES)
+										{
+											$claim_resolved = false;
+
+											$claim_diff = $affected_identity["diff"];
+
+											$removed_fields = removeMatches($claim_diff, $formatted_data);
+											if (sizeof($claim_diff) == 0)
+											{
+												$claim_resolved = true;
+											}
+
+											if ($claim_resolved)
+											{
+												VChainClaimDao::setResolved($claim["id"], CLAIM_RESOLUTION_TYPE_ACCEPTED, $source_id, $ip);
+											}
+										}
+									}
+								}
+							}
+						}
+
+						// сохраним информацию о верификациях
+						VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
+
+						return array(
+							"status"   => "success"
+						);
+
+					} else {
+
+						// изменений нет - все ровно так, как сейчас в базе
+
+						// сохраним сведения о верификациях
+						VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
+
+						return array(
+							"status"   => "success"
+						);
+					}
 
 				} else if ($check_identity_result["status"] == "error") {
 
@@ -91,11 +149,114 @@ class VChainVerification
 							"status"   => "success"
 						);
 
+					} else if ($check_identity_result["error_reason_code"] == ERROR_CODE_IDENTITY_POSSIBLE_MISTAKES)
+					{
+						// TODO что делать, если нашли возможные ошибки
+
+						if (   isset($check_identity_result["restrictions"])
+							&& in_array(IDENTITY_RESTRICTION_CREATION_PROHIBITED, $check_identity_result["restrictions"]))
+						{
+							// создавать новую identity запрещено
+							$formatted_data = $data;
+
+							$verification_fields = VChainIdentity::getInputFields($formatted_data);
+
+							$verification_data = self::applyVerificationSignatureRecursive($verification_fields, $verifications_binary_signatures);
+
+							$identity = VChainIdentityDao::get($check_identity_result["identities"][0]["id"]);
+
+							$diff = VChainIdentity::diff($identity, $formatted_data);
+
+							if (is_array($diff) && sizeof($diff) > 0)
+							{
+								// есть изменения в некоторых полях
+
+								// обновляем содержимое самих полей
+								VChainIdentityDao::update($identity["id"], $diff, $source_id, $ip);
+
+								// сбрасываем верификации по обновленным полям
+								VChainIdentityDao::clearVerifications($identity["id"], $diff);
+
+								// необходимо проверить claims и разрешить их, если возможно
+								$claims = VChainClaimDao::getByIdentityId($identity["id"]);
+
+								foreach ($claims as $claim)
+								{
+									if (isset($claim["affected_identities"]) && is_array($claim["affected_identities"]))
+									{
+										foreach ($claim["affected_identities"] as $affected_identity)
+										{
+											if (is_array($affected_identity) && isset($affected_identity["identity_id"]))
+											{
+												if (   $affected_identity["identity_id"] == $identity["id"]
+													&& $affected_identity["type"] == CLAIM_TYPE_POSSIBLE_CHANGES)
+												{
+													$claim_resolved = false;
+
+													$claim_diff = $affected_identity["diff"];
+
+													$removed_fields = removeMatches($claim_diff, $formatted_data);
+													if (sizeof($claim_diff) == 0)
+													{
+														$claim_resolved = true;
+													}
+
+													if ($claim_resolved)
+													{
+														VChainClaimDao::setResolved($claim["id"], CLAIM_RESOLUTION_TYPE_ACCEPTED, $source_id, $ip);
+													}
+												}
+											}
+										}
+									}
+								}
+
+								// сохраним информацию о верификациях
+								VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
+
+								return array(
+									"status"   => "success"
+								);
+
+							} else {
+								error_log("WIERD -- verifications with possible mistakes but no diff");
+								error_log("INTERRUPT");
+								exit;
+							}
+
+						} else {
+							// создавать новую identity - разрешено,
+							// однако необходимо проставить все новые claims
+
+							$formatted_data = $data;
+
+							$verification_fields = VChainIdentity::getInputFields($formatted_data);
+
+							$verification_data = self::applyVerificationSignatureRecursive($verification_fields, $verifications_binary_signatures);
+
+							$input_fields = VChainIdentity::getInputFields($formatted_data);
+
+							$created_identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
+
+							// сохраним информацию о верификациях
+							VChainIdentityDao::saveVerifications($created_identity, $verification_data, $source_id, $ip);
+
+							$possible_mistakes     = $check_identity_result["possible_mistakes"];
+							$comparsion_identities = $check_identity_result["identities"];
+
+							// повесим claim на нее и на уже существуюшие
+							$claim = VChainClaim::generateForNewIdentity($created_identity, $comparsion_identities, $possible_mistakes);
+							$claim = VChainClaimDao::create($claim, $source_id, $ip);
+
+							return array(
+								"status"   => "success"
+							);
+						}
+
 					} else {
 						// TODO что делать при верификации, если мы нашли много identity?
-						// TODO что делать при верификации, если мы нашли identity, но есть возможные ошибки?
+
 						error_log($check_identity_result["error_reason_code"]);
-						error_log("there are multiple identities OR possible mistake in previous stored data");
 						error_log("INTERRUPT");
 						exit;
 					}

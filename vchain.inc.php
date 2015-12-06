@@ -21,6 +21,11 @@ define("IDENTITY_RESTRICTION_CREATION_PROHIBITED", 1);
 define("CLAIM_TYPE_POSSIBLE_DUBLICATE", 1);
 define("CLAIM_TYPE_POSSIBLE_CHANGES", 2);
 
+define("CLAIM_STATUS_RESOLVED", "resolved");
+define("CLAIM_STATUS_UNRESOLVED", "unresolved");
+
+define("CLAIM_RESOLUTION_TYPE_ACCEPTED", "accepted");
+
 define("CREDENTIAL_FIRST_NAME_FIELD", "first_name");
 define("CREDENTIAL_LAST_NAME_FIELD", "last_name");
 define("CREDENTIAL_EMAIL_FIELD", "email");

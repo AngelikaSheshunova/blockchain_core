@@ -58,10 +58,13 @@ class VChainIdentity
 		{
 			if (is_array($value))
 			{
-				$t = self::diff($identity[$key], $value);
-				if (is_array($t) && sizeof($t) > 0)
+				if (isset($identity[$key]))
 				{
-					$output[$key] = $t;
+					$t = self::diff($identity[$key], $value);
+					if (is_array($t) && sizeof($t) > 0)
+					{
+						$output[$key] = $t;
+					}
 				}
 
 			} else {
@@ -198,6 +201,7 @@ class VChainIdentity
 							// TODO: что делаем, если нашли не одну identity по этим credentials?
 							error_log("INTERRUPT");
 							error_log("MORE THAN ONE IDENTITY FOUND!!!");
+							error_log(print_r($lookup, true));
 							exit;
 
 						} else {
@@ -335,8 +339,9 @@ class VChainIdentity
 									VChainIdentityDao::recordCheck($identities[0], $input_fields, $diff_fields, $source_id, $ip);
 
 									return array(
-										"status"   => "success",
-										"identity" => self::export($identities[0], $input_fields, $key, $claimed_fields)
+										"status"         => "success",
+										"identity"       => self::export($identities[0], $input_fields, $key, $claimed_fields),
+										"claimed_fields" => $claimed_fields
 									);
 
 								} else {

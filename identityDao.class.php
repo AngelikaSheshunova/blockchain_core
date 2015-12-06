@@ -42,7 +42,7 @@ class VChainIdentityDao
 		return $document;
 	}
 
-	public static function create($data, $data_email, $data_phone, $source_id, $ip, $emulation = false)
+	public static function create($data, $data_email, $data_phone, $source_id, $ip)
 	{
 		unset($data["id"]);
 		unset($data["_id"]);
@@ -86,12 +86,107 @@ class VChainIdentityDao
 		$data["id"] = (string) $data["_id"];
 		unset($data["_id"]);
 
-		if ($emulation)
+		return $data;
+	}
+
+	private static function formUpdate($data, $root = "")
+	{
+		$output = array();
+
+		foreach ($data as $key => $value)
 		{
-			$collection->remove(array("_id" => new MongoId($data["id"])));
+			if (is_array($value))
+			{
+				$new_root = $key;
+				if (strcmp(trim($root), "") != 0)
+				{
+					$new_root = $root.".".$key;
+				}
+
+				$temp = self::formUpdate($data[$key], $new_root);
+				if (is_array($temp))
+				{
+					foreach ($temp as $k => $v)
+					{
+						$output[$k] = $v;
+					}
+				}
+
+			} else {
+				$root_key = $key;
+				if (strcmp(trim($root), "") != 0)
+				{
+					$root_key = $root.".".$key;
+				}
+
+				$output[$root_key] = $value;
+			}
 		}
 
-		return $data;
+		return $output;
+	}
+
+	public static function clearVerifications($identity_id, $diff)
+	{
+		$m = new MongoClient();
+
+		$db = $m->vchain;
+
+		$collection = $db->identities;
+
+		$verifications_update = self::formVerificationsUpdate($diff);
+
+		foreach ($verifications_update as $key => $value)
+		{
+			$collection->update(
+				array("_id" => new MongoId($identity_id)),
+				array('$set' => array( $key => array() ))
+			);
+		}
+
+		return true;
+	}
+
+	public static function update($identity_id, $update_data, $ip, $source_id)
+	{
+		$current_time = time();
+
+		$m = new MongoClient();
+
+		$db = $m->vchain;
+
+		$collection = $db->identities;
+
+		$new_history_element = array(
+			"time"   => $current_time,
+			"action" => "update",
+			"fields" => VChainIdentity::getInputFields($update_data),
+			"ip"     => $ip,
+			"source" => $source_id
+		);
+
+		$identity["history"][] = $new_history_element;
+
+		$collection->update(
+			array("_id" => new MongoId($identity_id)),
+			array(
+				'$push' => array(
+					"history" => $new_history_element
+				)
+			)
+		);
+
+		$updates = self::formUpdate($update_data);
+
+		foreach ($updates as $key => $value)
+		{
+			$collection->update(
+				array("_id" => new MongoId($identity_id)),
+				array('$set' => array( $key => $value ))
+			);
+		}
+
+		return true;
 	}
 
 	public static function recordCheck(&$identity, $data, $diff_fields, $source_id, $ip)

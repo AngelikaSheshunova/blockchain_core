@@ -263,7 +263,7 @@ class VChainCredentials
 			);
 		}
 
-		if (   $email_isset
+		/*if (   $email_isset
 			&& $phone_isset)
 		{
 			if (!isset($output[1])) $output[1] = array();
@@ -290,7 +290,7 @@ class VChainCredentials
 			$output[2][] = array(
 				CREDENTIAL_PHONE_FIELD
 			);
-		}
+		}*/
 
 		return $output;
 	}
