@@ -435,6 +435,8 @@ class VChainIdentity
 				$input_fields = self::getInputFields($formatted_data);
 
 				$created_identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
+				if (!empty($data_email))
+					VChainUserDao::create($created_identity["id"], $data_email, $data_phone);
 
 				VChainIdentityDao::recordUsage($created_identity, $formatted_data, $source_id, $using_cause, $ip);
 
@@ -480,6 +482,8 @@ class VChainIdentity
 					$input_fields = self::getInputFields($formatted_data);
 
 					$created_identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
+					if (!empty($data_email))
+						VChainUserDao::create($created_identity["id"], $data_email, $data_phone);
 
 					VChainIdentityDao::recordUsage($created_identity, $formatted_data, $source_id, $using_cause, $ip);
 

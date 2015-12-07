@@ -3,6 +3,7 @@
 $personas = array();
 $identities = array();
 $claims = array();
+$users = array();
 
 $personas[] = "
 {
@@ -36,8 +37,8 @@ $personas[] = "
     \"value\": \"07/05/1987\",
     \"format\": \"mm/dd/yyyy\"
   },
-  \"email\": \"a.a.gorelik@gmail.com\",
-  \"phone\": \"+79162194530\",
+  \"email\": \"aagorelik@gmail.com\",
+  \"phone\": \"+79152194530\",
   \"passports\": [
     {
       \"number\": \"77 1234567111\",
@@ -63,7 +64,7 @@ $personas[] = "
   \"phone\": \"+79162194530\",
   \"passports\": [
     {
-      \"number\": \"77 1234567333\",
+      \"number\": \"77 1234567\",
       \"nationality\": {
         \"value\": \"USA\",
         \"format\": \"alpha-3\"
@@ -301,8 +302,8 @@ $identities[] = "
     ]
   },
   \"user_data\": {
-    \"email\": \"a.a.gorelik@gmail.com\",
-    \"phone\": \"+79162194530\"
+    \"email\": \"aagorelik@gmail.com\",
+    \"phone\": \"+79152194530\"
   }
 }";
 
@@ -359,6 +360,24 @@ $claims[] = "
   \"status\" : \"unresolved\",
   \"source_id\": \"5656d8bfd7036ce6320041a7\",
   \"ip\": \"127.0.0.1\"
+}";
+
+$users[] = "
+{
+  \"created\" : \"1448532612\",
+  \"identity_id\" : \"5656da84d7036cdd100041c7\",
+  \"email\" : \"a.a.gorelik@gmail.com\",
+  \"phone\" : \"+79162194530\",
+  \"status\" : \"not_activated\"
+}";
+
+$users[] = "
+{
+  \"created\" : \"1448532612\",
+  \"identity_id\" : \"5656dc8dd7036c57110041cb\",
+  \"email\" : \"a.a.gorelik2@gmail.com\",
+  \"phone\" : \"+79152194530\",
+  \"status\" : \"not_activated\"
 }";
 
 ?>

@@ -36,7 +36,4 @@ $collection->insert(array(
 	"name"       => "vchain demo admin"
 ));
 
-
-
-
 ?>

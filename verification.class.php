@@ -142,6 +142,8 @@ class VChainVerification
 						$verification_data = self::applyVerificationSignatureRecursive($verification_fields, $verifications_binary_signatures);
 
 						$identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
+						if (!empty($data_email))
+							VChainUserDao::create($identity["id"], $data_email, $data_phone);
 
 						VChainIdentityDao::saveVerifications($identity, $verification_data, $source_id, $ip);
 
@@ -237,6 +239,8 @@ class VChainVerification
 							$input_fields = VChainIdentity::getInputFields($formatted_data);
 
 							$created_identity = VChainIdentityDao::create($formatted_data, $data_email, $data_phone, $source_id, $ip);
+							if (!empty($data_email))
+								VChainUserDao::create($created_identity["id"], $data_email, $data_phone);
 
 							// сохраним информацию о верификациях
 							VChainIdentityDao::saveVerifications($created_identity, $verification_data, $source_id, $ip);
@@ -366,6 +370,29 @@ class VChainVerification
 		return $output;
 	}
 
+	public static function issetMajorVerification($verifications)
+	{
+		if (is_array($verifications))
+		{
+			foreach ($verifications as $key => $value)
+			{
+				if (is_array($value))
+				{
+					return self::issetMajorVerification($value);
+
+				} else {
+					if (   strcmp($key, "email") != 0
+						&& strcmp($key, "phone") != 0)
+					{
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
 	public static function validateAndExportVerifications($formatted_data, $export_verifications, $claimed_fields = array())
 	{
 		$output = array();
@@ -460,7 +487,17 @@ class VChainVerification
 								"verified" => true,
 								"level"    => $verification_level
 							);
+
+						} else if (!isset($output[$key])) {
+							$output[$key] = array(
+								"verified" => false
+							);
 						}
+
+					} else if (!isset($output[$key])) {
+						$output[$key] = array(
+							"verified" => false
+						);
 					}
 
 				} else {
