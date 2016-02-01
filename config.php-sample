@@ -9,6 +9,7 @@ define("VCHAIN_URL_DEMO", "http://demo.vchain.dev:8080/");
 define("VCHAIN_URL_CDN", "http://cdn.vchain.dev:8080/");
 define("VCHAIN_URL_DEMO_VERIFIER", "http://demo-verifier.vchain.dev:8080/");
 define("VCHAIN_URL_DEMO_ADMIN", "http://demo-admin.vchain.dev:8080/");
+define("VCHAIN_URL_DEMO_AV", "http://demo-av.vchain.dev:8080/");
 define("VCHAIN_URL_VCHAIN", "http://www.vchain.dev:8080/");
 
 define("VCHAIN_SOURCE_KEY_DEMO_VERIFIER", "279312d19d2fr39820c2787fa1451e70cb0f5b662d062ec12a23d623fa0192f6d8728c912680a8e399d569eaa0f9c949d5a0d3d743050ea2ab4411a951b4e5c1");
